@@ -11,33 +11,32 @@ __maintainer__ = 'Eric Sivonxay'
 __email__ = 'esivonxay@lbl.gov'
 
 
-def get_converge_wf(structure, temperature, converge_scheme='EOS', priority=None,
+def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=None,
                     max_steps=5000, target_steps=10000, preconverged=False,
                     notes=None, save_data="all", aggregate_trajectory=True, **kwargs):
     """
 
-    Args:
-        structure: Starting structure for the run
-        temperature: Temperature for the MD runs
-        converge_scheme: Equation of state is normally faster and preferred
-        priority: Priority of all fireworks in the workflows
-        max_steps: Maximum number of steps per chunk of production run MD simulation
-        target_steps: Target number of steps for production MD run
-        preconverged: Whether the structure already converged (i.e. Pressure 0bar)
-            or volume rescaling not desired
-        notes: Any additional comments to propagate with this run
-        save_data: Level to save job outputs. Options are "all", 'production', and None
-        aggregate_trajectory: Whether to aggregate trajectory to database
-        **kwargs: Arguments such as spawner_args, converge_args, convergence_criteria,
-            tag_id, prod_count, etc.
+        Args:
+            structure: Starting structure for the run
+            temperature: Temperature for the MD runs
+            converge_scheme: Equation of state is normally faster and preferred
+            priority: Priority of all fireworks in the workflows
+            max_steps: Maximum number of steps per chunk of production run MD simulation
+            target_steps: Target number of steps for production MD run
+            preconverged: Whether the structure already converged (i.e. Pressure 0bar)
+                or volume rescaling not desired
+            notes: Any additional comments to propagate with this run
+            save_data: Level to save job outputs. Options are "all", 'production', and None
+            aggregate_trajectory: Whether to aggregate trajectory to database
+            **kwargs: Arguments such as spawner_args, converge_args, convergence_criteria,
+                tag_id, prod_count, etc.
 
-    Returns: Workflow object
+        Returns: A list of Fireworks objects
 
-    """
+        """
     # Generate a unique identifier for the fireworks belonging to this workflows
     tag_id = kwargs.get('tag_id', uuid.uuid4())
     prod_count = kwargs.get('prod_count', 0)
-    wf_name = kwargs.get('wf_name', f'{structure.composition.reduced_formula}_{temperature}_diffusion')
 
     # To aggregate trajectory, the job output from the production runs must be saved.
     if aggregate_trajectory and save_data is None:
@@ -87,7 +86,7 @@ def get_converge_wf(structure, temperature, converge_scheme='EOS', priority=None
             volume_fws = []
             for n, (i, vol_structure) in enumerate(zip(images, structures)):
                 save_structure = True if n == len(images) - 1 else False
-                _fw = MDFW(structure=vol_structure, name=f'volume_{i}-{tag_id}',
+                _fw = MDFW(structure=vol_structure, name=f'volume_{i}',
                            previous_structure=False, insert_db=insert_converge_data, save_structure=save_structure,
                            **EOS_run_args["md_params"], **EOS_run_args["run_specs"],
                            **EOS_run_args["optional_fw_params"])
@@ -143,5 +142,36 @@ def get_converge_wf(structure, temperature, converge_scheme='EOS', priority=None
         fw_list[-1] = powerups.aggregate_trajectory(fw_list[-1], tag_id=tag_id, notes=notes,
                                                     db_file=run_args["run_specs"]["db_file"])
 
+    return fw_list
+
+
+def get_converge_wf(structure, temperature, converge_scheme='EOS', priority=None,
+                    max_steps=5000, target_steps=10000, preconverged=False,
+                    notes=None, save_data="all", aggregate_trajectory=True, **kwargs):
+    """
+
+    Args:
+        structure: Starting structure for the run
+        temperature: Temperature for the MD runs
+        converge_scheme: Equation of state is normally faster and preferred
+        priority: Priority of all fireworks in the workflows
+        max_steps: Maximum number of steps per chunk of production run MD simulation
+        target_steps: Target number of steps for production MD run
+        preconverged: Whether the structure already converged (i.e. Pressure 0bar)
+            or volume rescaling not desired
+        notes: Any additional comments to propagate with this run
+        save_data: Level to save job outputs. Options are "all", 'production', and None
+        aggregate_trajectory: Whether to aggregate trajectory to database
+        **kwargs: Arguments such as spawner_args, converge_args, convergence_criteria,
+            tag_id, prod_count, etc.
+
+    Returns: Workflow object
+
+    """
+    fw_list = get_converge_fws(structure, temperature, converge_scheme=converge_scheme,
+                               priority=priority, max_steps=max_steps, save_data=save_data,
+                               target_steps=target_steps, preconverged=preconverged, notes=notes,
+                               aggregate_trajectory=aggregate_trajectory, **kwargs)
+    wf_name = kwargs.get('wf_name', f'{structure.composition.reduced_formula}_{temperature}_diffusion')
     wf = Workflow(fireworks=fw_list, name=wf_name)
     return wf

@@ -29,6 +29,28 @@ class PreviousStructureTask(FireTaskBase):
         return FWAction()
 
 
+# @explicit_serialize
+# class StructureFromTrajectory(FireTaskBase):
+#     required_params = ['tag_id', 'index']
+#     optional_params = ['rescale_volume']
+#
+#     def run_task(self, fw_spec):
+#         tag_id = self['tag_id']
+#         index = self.get('index', -1)
+#
+#         #Load trajectory for given tag_id
+#
+#         #Grab structure at index
+#
+#         #Rescale structure if necessary
+#
+#
+#         #Save structure to POSCAR
+#         _poscar = Poscar(structure_dict)
+#         _poscar.write_file("POSCAR")
+#         return FWAction()
+
+
 @explicit_serialize
 class SaveStructureTask(FireTaskBase):
     required_params = []

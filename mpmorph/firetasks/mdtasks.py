@@ -5,7 +5,6 @@ from fireworks import explicit_serialize, Workflow, FireTaskBase, FWAction
 from mpmorph.analysis import md_data
 from mpmorph.runners.rescale_volume import RescaleVolume, fit_BirchMurnaghanPV_EOS
 from mpmorph.util import recursive_update
-from pymatgen import Structure
 from pymatgen.io.vasp import Poscar
 from pymatgen.io.vasp.outputs import Vasprun
 from scipy import stats
@@ -17,21 +16,21 @@ __email__ = "esivonxay@lbl.gov"
 
 @explicit_serialize
 class DiffusionTask(FireTaskBase):
-    required_params = ['temperatures', 'max_steps', 'target_steps',
-                       'num_samples' 'trajectory_to_db', 'notes']
+    required_params = ['temperatures', 'max_steps', 'target_steps', 'num_samples']
     optional_params = []
 
     def run_task(self, fw_spec):
-        from mpmorph.workflows.converge import get_converge_wf
+        from mpmorph.workflows.converge import get_converge_fws
 
         vr = Vasprun('vasprun.xml.gz')
-
+        ss = [vr.structures[i] for i in np.linspace(
+            0, len(vr.structures), self['num_samples'], dtype=int)]
         fws = []
-        for t in self['temperatures']:
-            fws.extend(get_converge_wf(s, int(t), max_steps=self['max_steps'],
-                                       target_steps=self['target_steps'],
-                                       trajectory_to_db=self['trajectory_to_db'],
-                                       notes=self['notes']))
+        for i in range(self['num_samples']):
+            for t in self['temperatures']:
+                fws.extend(get_converge_fws(ss[i], t, max_steps=self['max_steps'],
+                                            target_steps=self['target_steps'],
+                                            notes=f'sample_{i+1}'))
         wf = Workflow(fws)
         return FWAction(detours=wf)
 

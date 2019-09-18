@@ -82,6 +82,7 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
 
             # Create firework for each structure
             EOS_run_args = deepcopy(run_args)
+            EOS_run_args['md_params']['nsteps'] = 1500
             EOS_run_args = recursive_update(EOS_run_args, kwargs.get('converge_args', {}))
             volume_fws = []
             for n, (i, vol_structure) in enumerate(zip(images, structures)):

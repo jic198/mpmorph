@@ -44,7 +44,7 @@ class ConvergeTask(FireTaskBase):
     """
 
     required_params = ["converge_params", "run_specs", "md_params"]
-    optional_params = ["rescale_params", 'tag_id']
+    optional_params = ["rescale_params", 'tag_id', 'optional_fw_params']
 
     def run_task(self, fw_spec):
         from mpmorph.fireworks import powerups

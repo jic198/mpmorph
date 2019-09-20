@@ -51,9 +51,7 @@ class MDFW(Firework):
                                                    end_temp=end_temp, nsteps=nsteps,
                                                    **override_default_vasp_params)
 
-        t = []
-
-        t.append(WriteVaspFromIOSet(structure=structure, vasp_input_set=vasp_input_set))
+        t = [WriteVaspFromIOSet(structure=structure, vasp_input_set=vasp_input_set)]
         if previous_structure:
             t.append(PreviousStructureTask())
         t.append(RunVaspCustodian(vasp_cmd=vasp_cmd, gamma_vasp_cmd=">>gamma_vasp_cmd<<",

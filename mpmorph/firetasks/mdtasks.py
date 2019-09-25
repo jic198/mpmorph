@@ -24,7 +24,7 @@ class DiffusionTask(FireTaskBase):
 
         vr = Vasprun('vasprun.xml.gz')
         ss = [vr.structures[i] for i in np.linspace(
-            0, len(vr.structures), self['num_samples'], dtype=int)]
+            0, len(vr.structures) - 1, self['num_samples'], dtype=int)]
         fws = []
         for i in range(self['num_samples']):
             for t in self['temperatures']:

@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+from atomate.vasp.powerups import add_modify_incar
 from fireworks import explicit_serialize, Workflow, FireTaskBase, FWAction
 from mpmorph.analysis import md_data
 from mpmorph.runners.rescale_volume import RescaleVolume, fit_BirchMurnaghanPV_EOS
@@ -32,6 +33,7 @@ class DiffusionTask(FireTaskBase):
                                             target_steps=self['target_steps'],
                                             notes=f'sample_{i+1}'))
         wf = Workflow(fws)
+        wf = add_modify_incar(wf)
         return FWAction(detours=wf)
 
 
@@ -135,6 +137,7 @@ class ConvergeTask(FireTaskBase):
                 fw = powerups.add_pass_pv(fw)
                 fw = powerups.add_converge_task(fw, **_spawner_args)
                 wf = Workflow([fw])
+                wf = add_modify_incar(wf)
                 return FWAction(detours=wf, stored_data={'pressure': pressure, 'energy': mu})
             else:
                 fw = MDFW(structure, name=f'energy_run_{energy_spawn_count + 1}_{tag_id}', previous_structure=False,
@@ -146,6 +149,7 @@ class ConvergeTask(FireTaskBase):
                 fw = powerups.add_pass_pv(fw)
                 fw = powerups.add_converge_task(fw, **_spawner_args)
                 wf = Workflow([fw])
+                wf = add_modify_incar(wf)
                 return FWAction(detours=wf, stored_data={'pressure': pressure, 'energy': mu})
         else:
             return FWAction(stored_data={'pressure': pressure,

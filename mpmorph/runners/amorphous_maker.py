@@ -231,18 +231,17 @@ def get_random_packed(composition, add_specie=None, target_atoms=100,
         # comp = Composition(comp)
 
     # Generate dict of elements and amounts for AmorphousMaker
-    structure = {}
-    for el in comp:
-        structure[str(el)] = int(comp.element_composition.get(el))
+    species_num = {el.symbol: int(comp.element_composition.get(el)) for el in comp}
 
     if modify_species is not None:
-        for i, v in modify_species.items():
-            structure[i] += v
+        for sp, v in modify_species.items():
+            species_num[sp] = species_num.get(sp, 0) + v
     # use packmol to get a random configured structure
     packmol_path = os.environ['PACKMOL_PATH']
     amorphous_maker_params = {'box_scale': (vol_per_atom * comp.num_atoms * vol_exp) ** (1 / 3),
-                              'packmol_path': packmol_path, 'xyz_paths': None, 'time_seed' : use_random_seed}
+                              'packmol_path': packmol_path, 'xyz_paths': None,
+                              'time_seed' : use_random_seed}
 
-    glass = AmorphousMaker(structure, **amorphous_maker_params)
+    glass = AmorphousMaker(species_num, **amorphous_maker_params)
     structure = glass.random_packed_structure
     return structure

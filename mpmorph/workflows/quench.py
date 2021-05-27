@@ -10,32 +10,31 @@ __maintainer__ = 'Eric Sivonxay'
 __email__ = 'esivonxay@lbl.gov'
 
 
-def get_quench_wf(structures, temperatures={}, priority=None, quench_type="slow_quench", cool_args={}, hold_args={},
-                  quench_args={},
-                  descriptor="", **kwargs):
+def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slow_quench",
+                  cool_args=None, hold_args=None, quench_args=None, descriptor=None, **kwargs):
     fw_list = []
-    temp = {"start_temp": 3000, "end_temp": 500, "temp_step": 500} if temp is None else temp
+    temp = [3000, 500, 500] if temperatures is None else temperatures
     cool_args = {"md_params": {"nsteps": 200}} if cool_args is None else cool_args
     hold_args = {"md_params": {"nsteps": 500}} if hold_args is None else hold_args
     quench_args = {} if quench_args is None else quench_args
+    descriptor = descriptor if descriptor else ''
 
     for (i, structure) in enumerate(structures):
         _fw_list = []
         if quench_type == "slow_quench":
-            for temp in np.arange(temperatures["start_temp"], temperatures["end_temp"], -temperatures["temp_step"]):
+            for t in np.arange(temp[0], temp[1], -temp[2]):
                 # get fw for cool step
                 use_prev_structure = False
                 if len(_fw_list) > 0:
                     use_prev_structure = True
-                _fw = get_MDFW(structure, t, t - temp["temp_step"],
-                               name="snap_" + str(i) + "_cool_" + str(t - temp["temp_step"]),
+                _fw = get_MDFW(structure, t, t - temp[2], name=f'snap_{i}_cool_{t - temp[2]}',
                                args=cool_args, parents=[_fw_list[-1]] if len(_fw_list) > 0 else [],
                                priority=priority, previous_structure=use_prev_structure,
                                insert_db=True, **kwargs)
                 _fw_list.append(_fw)
                 # get fw for hold step
-                _fw = get_MDFW(structure, t - temp["temp_step"], t - temp["temp_step"],
-                               name="snap_" + str(i) + "_hold_" + str(t - temp["temp_step"]),
+                _fw = get_MDFW(structure, t - temp[2], t - temp[2],
+                               name=f'snap_{i}_hold_{t - temp[2]}',
                                args=hold_args, parents=[_fw_list[-1]], priority=priority,
                                previous_structure=True, insert_db=True, **kwargs)
                 _fw_list.append(_fw)
@@ -46,7 +45,8 @@ def get_quench_wf(structures, temperatures={}, priority=None, quench_type="slow_
                                       "db_file": ">>db_file<<",
                                       "spec": {"_priority": priority}
                                       },
-                        "optional_fw_params": {"override_default_vasp_params": {}}
+                        "optional_fw_params": {"override_default_vasp_params": {
+                            'user_incar_settings': {'ISIF': 2}}}
                         }
             run_args = recursive_update(run_args, quench_args)
             _name = "snap_" + str(i)
@@ -74,11 +74,11 @@ def get_quench_wf(structures, temperatures={}, priority=None, quench_type="slow_
     return wf
 
 
-def get_MDFW(structure, start_temp, end_temp, name="molecular dynamics", priority=None, job_time=None, args={},
-             **kwargs):
-    run_args = {"md_params": {"nsteps": 500},
-                "run_specs": {"vasp_input_set": None, "vasp_cmd": ">>vasp_cmd<<", "db_file": ">>db_file<<",
-                              "wall_time": 40000},
+def get_MDFW(structure, start_temp, end_temp, name="molecular dynamics", priority=None,
+             args=None, **kwargs):
+    run_args = {"md_params": {"nsteps": 500, "start_temp": start_temp, "end_temp": end_temp},
+                "run_specs": {"vasp_input_set": None, "vasp_cmd": ">>vasp_cmd<<",
+                              "db_file": ">>db_file<<"},
                 "optional_fw_params": {"override_default_vasp_params": {}, "spec": {}}}
 
     run_args["optional_fw_params"]["override_default_vasp_params"].update(

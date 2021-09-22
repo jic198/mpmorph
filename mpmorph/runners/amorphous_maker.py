@@ -5,7 +5,8 @@ import shutil
 from collections import OrderedDict
 
 import numpy as np
-from pymatgen import Structure, MPRester, Composition
+from mp_api.matproj import MPRester
+from pymatgen.core import Structure, Composition
 from pymatgen.io.vasp.inputs import Poscar
 
 __author__ = 'Eric Sivonxay, Jianli Cheng, and Muratahan Aykol'
@@ -200,8 +201,7 @@ def get_random_packed(composition, add_specie=None, target_atoms=100,
     if type(add_specie) == str:
         add_specie = Composition(add_specie)
 
-    comp_entries = mpr.get_entries(composition.reduced_formula,
-                                   inc_structure=True)
+    comp_entries = mpr.get_entries(composition.reduced_formula)
     if vol_per_atom is None:
         if len(comp_entries) > 0:
             vols = np.min([entry.structure.volume / entry.structure.num_sites
@@ -210,7 +210,7 @@ def get_random_packed(composition, add_specie=None, target_atoms=100,
             # Find all Materials project entries containing the elements in the
             # desired composition to estimate starting volume.
             _entries = mpr.get_entries_in_chemsys(
-                [str(el) for el in composition.elements], inc_structure=True)
+                [str(el) for el in composition.elements])
             entries = []
             for entry in _entries:
                 if set(entry.structure.composition.elements) == set(composition.elements):

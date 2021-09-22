@@ -13,7 +13,7 @@ __email__ = 'esivonxay@lbl.gov'
 
 def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=None,
                     max_steps=5000, target_steps=10000, preconverged=False,
-                    notes=None, save_data="all", aggregate_trajectory=True, **kwargs):
+                    notes=None, save_data="production", aggregate_trajectory=True, **kwargs):
     """
 
         Args:

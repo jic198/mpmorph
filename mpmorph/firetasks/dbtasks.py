@@ -81,6 +81,9 @@ class VaspMDToDb(FiretaskBase):
                 f.write(json.dumps(task_doc, default=DATETIME_HANDLER))
         else:
             mmdb = VaspMDCalcDb.from_db_file(db_file, admin=True)
+            # prevent duplicate insertion
+            mmdb.db.tasks.find_one_and_delete({'formula_pretty': task_doc['formula_pretty'],
+                                               'task_label': task_doc['task_label']})
             t_id = mmdb.insert_task(task_doc,
                                     parse_dos=self.get("parse_dos", False),
                                     parse_bs=bool(self.get("bandstructure_mode", False)),
@@ -143,8 +146,7 @@ def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):
         'runs_label': runs_label,
         'compression': compression_type,
         'fs_id': gfs_id,
-        'step_fs_ids': [i["calcs_reversed"][0]["output"]['ionic_steps_fs_id']
-                        for i in runs],
+        'step_fs_ids': [i["trajectory"]['fs_id'] for i in runs],
         'structure': trajectory[0].as_dict(),
         'dimension': list(np.shape(trajectory.frac_coords)),
         'time_step': runs[0]["input"]["incar"]["POTIM"] * 1e-3,

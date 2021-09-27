@@ -82,8 +82,13 @@ class VaspMDToDb(FiretaskBase):
         else:
             mmdb = VaspMDCalcDb.from_db_file(db_file, admin=True)
             # prevent duplicate insertion
-            mmdb.db.tasks.find_one_and_delete({'formula_pretty': task_doc['formula_pretty'],
-                                               'task_label': task_doc['task_label']})
+            task = mmdb.db.tasks.find_one_and_delete({
+                'formula_pretty': task_doc['formula_pretty'],
+                'task_label': task_doc['task_label']})
+            if task.get('trajectory'):
+                fs_id = task['trajectory']['fs_id']
+                mmdb.db.trajectories_fs.files.delete_one({'_id': fs_id})
+                mmdb.db.trajectories_fs.chunks.delete_many({'files_id': fs_id})
             t_id = mmdb.insert_task(task_doc,
                                     parse_dos=self.get("parse_dos", False),
                                     parse_bs=bool(self.get("bandstructure_mode", False)),
@@ -115,7 +120,11 @@ class TrajectoryDBTask(FiretaskBase):
         # get the database connection
         db_file = env_chk(self.get('db_file'), fw_spec)
         mmdb = VaspMDCalcDb.from_db_file(db_file, admin=True)
-        mmdb.db.trajectories.find_one_and_delete({"runs_label": tag_id})
+        traj = mmdb.db.trajectories.find_one_and_delete({"runs_label": tag_id})
+        if traj:
+            fs_id = traj['fs_id']
+            mmdb.db.trajectories_fs.files.delete_one({'_id': fs_id})
+            mmdb.db.trajectories_fs.chunks.delete_many({'files_id': fs_id})
         runs = mmdb.db['tasks'].find(
             {"task_label": re.compile(f'\d+_run.*{tag_id}.*')})
         runs_sorted = sorted(runs, key=lambda x: int(re.findall('run[_-](\d+)', x['task_label'])[0]))

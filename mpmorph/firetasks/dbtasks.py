@@ -85,7 +85,7 @@ class VaspMDToDb(FiretaskBase):
             task = mmdb.db.tasks.find_one_and_delete({
                 'formula_pretty': task_doc['formula_pretty'],
                 'task_label': task_doc['task_label']})
-            if task.get('trajectory'):
+            if task and task.get('trajectory'):
                 fs_id = task['trajectory']['fs_id']
                 mmdb.db.trajectories_fs.files.delete_one({'_id': fs_id})
                 mmdb.db.trajectories_fs.chunks.delete_many({'files_id': fs_id})

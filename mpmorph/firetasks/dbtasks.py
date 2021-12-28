@@ -186,7 +186,8 @@ def load_trajectories_from_gfs(runs, mmdb):
             # Load Ionic steps from gfs, then convert to trajectory before extending
             # (compatibility code for when mpmorph stored trajectories as a list of structure dicts)
             ionic_steps_dict = load_ionic_steps(fs_id=fs_id, db=mmdb.db, fs=fs)
-            _trajectory = convert_ionic_steps_to_trajectory((ionic_steps_dict))
+            time_step = run['input']['incar']['POTIM']
+            _trajectory = convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step)
         if trajectory is None:
             trajectory = _trajectory
         else:

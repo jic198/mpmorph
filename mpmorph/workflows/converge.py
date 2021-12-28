@@ -54,6 +54,8 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
                 }
                 }
     run_args = recursive_update(run_args, kwargs.get('converge_args', {}))
+    run_args['optional_fw_params'] = recursive_update(
+        run_args['optional_fw_params'], kwargs.get('optional_fw_params', {}))
 
     # Setup Dictionary specifying parameters of the spawner for convergence tasks
     _spawner_args = {
@@ -61,9 +63,9 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
                             'converge_type': kwargs.get('convergence_criteria',
                                                         [("density", 5), ('ionic', 0.001)])},
         "rescale_params": {"beta": 5e-7},
-        "run_specs": run_args["run_specs"],
-        "md_params": run_args["md_params"],
-        "optional_fw_params": run_args["optional_fw_params"],
+        "run_specs": deepcopy(run_args["run_specs"]),
+        "md_params": deepcopy(run_args["md_params"]),
+        "optional_fw_params": deepcopy(run_args["optional_fw_params"]),
         "tag_id": tag_id
     }
     _spawner_args["md_params"].update({"start_temp": run_args["md_params"]["end_temp"]})
@@ -101,7 +103,6 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
                               previous_structure=True, insert_db=insert_converge_data,
                               parents=volume_fws, **run_args["md_params"],
                               **run_args["run_specs"], **run_args["optional_fw_params"])
-
             spawner_fw = powerups.add_pv_volume_rescale(spawner_fw)
             spawner_fw = powerups.add_pass_pv(spawner_fw)
             _spawner_args['run_specs']['insert_db'] = insert_converge_data
@@ -117,18 +118,9 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
     # Production length MD runs
     insert_prod_data = True if save_data == "all" or save_data == "production" else False
     prod_steps = 0
+    run_args['md_params']['nsteps'] = max_steps
+    run_args = recursive_update(run_args, kwargs.get('prod_args', {}))
     while prod_steps <= target_steps - max_steps:
-        # Create Dictionary with production run parameters
-        run_args = {"md_params": {"start_temp": run_args["md_params"]["end_temp"],
-                                  "end_temp": run_args["md_params"]["end_temp"],
-                                  "nsteps": max_steps},
-                    "run_specs": {"vasp_cmd": ">>vasp_cmd<<", "db_file": ">>db_file<<"},
-                    "optional_fw_params": {"override_default_vasp_params":
-                                               {'user_incar_settings': {'ISIF': 1, 'LWAVE': False,
-                                                                        'PREC': 'Normal'}},
-                                           "spec": {'_priority': priority}}}
-        run_args = recursive_update(run_args, kwargs.get('prod_args', {}))
-
         parents = fw_list[-1] if len(fw_list) > 0 else []
         previous_structure = False if preconverged and prod_steps == 0 else True
         fw = MDFW(structure=structure, name=f'{temperature}_run_{prod_count}-{tag_id}',

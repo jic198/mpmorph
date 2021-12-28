@@ -18,7 +18,7 @@ __email__ = "esivonxay@lbl.gov"
 @explicit_serialize
 class DiffusionTask(FireTaskBase):
     required_params = ['temperatures', 'max_steps', 'target_steps', 'num_samples']
-    optional_params = []
+    optional_params = ['optional_fw_params']
 
     def run_task(self, fw_spec):
         from mpmorph.workflows.converge import get_converge_fws
@@ -27,11 +27,13 @@ class DiffusionTask(FireTaskBase):
         ss = [vr.structures[i] for i in np.linspace(
             0, len(vr.structures) - 1, self['num_samples'], dtype=int)]
         fws = []
+        optional_params = self.get('optional_fw_params', {})
         for i in range(self['num_samples']):
             for t in self['temperatures']:
                 fws.extend(get_converge_fws(ss[i], t, max_steps=self['max_steps'],
                                             target_steps=self['target_steps'],
-                                            notes=f'sample_{i+1}'))
+                                            notes=f'sample_{i+1}',
+                                            optional_fw_params=optional_params))
         wf = Workflow(fws)
         wf = add_modify_incar(wf)
         return FWAction(detours=wf)

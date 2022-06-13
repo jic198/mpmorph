@@ -155,10 +155,12 @@ def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):
         'runs_label': runs_label,
         'compression': compression_type,
         'fs_id': gfs_id,
+        'fs': 'trajectories_fs',
         'step_fs_ids': [i["trajectory"]['fs_id'] for i in runs],
         'structure': trajectory[0].as_dict(),
         'dimension': list(np.shape(trajectory.frac_coords)),
         'time_step': runs[0]["input"]["incar"]["POTIM"] * 1e-3,
+        'frame_properties': list(trajectory.frame_properties.keys()),
         'notes': notes
     }
     return traj_doc

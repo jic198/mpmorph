@@ -5,7 +5,7 @@ import shutil
 from collections import OrderedDict
 
 import numpy as np
-from mp_api.matproj import MPRester
+from mp_api.client import MPRester
 from pymatgen.core import Structure, Composition
 from pymatgen.io.vasp.inputs import Poscar
 

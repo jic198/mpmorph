@@ -126,7 +126,7 @@ class TrajectoryDBTask(FiretaskBase):
             mmdb.db.trajectories_fs.files.delete_one({'_id': fs_id})
             mmdb.db.trajectories_fs.chunks.delete_many({'files_id': fs_id})
         runs = mmdb.db['tasks'].find(
-            {"task_label": re.compile(f'\d+_run.*{tag_id}.*')})
+            {"task_label": re.compile(f'\d+_run.*{tag_id}')})
         runs_sorted = sorted(runs, key=lambda x: int(re.findall('run[_-](\d+)', x['task_label'])[0]))
         trajectory_doc = runs_to_trajectory_doc(runs_sorted, mmdb, tag_id, notes)
         mmdb.db.trajectories.insert_one(trajectory_doc)

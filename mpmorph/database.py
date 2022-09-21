@@ -82,14 +82,17 @@ class VaspMDCalcDb(VaspCalcDb):
 
 
 def convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step):
-    read_site_props = False
     if ionic_steps_dict[0]['structure']['sites'][0].get('properties'):
         read_site_props = True
+        site_properties = []
+    else:
+        read_site_props = False
+        site_properties = None
+
     lattice = ionic_steps_dict[0]['structure']['lattice']['matrix']
     species = [site['species'][0]['element'] for site in ionic_steps_dict[0]['structure']['sites']]
 
     frac_coords = []
-    site_properties = []
     for ionic_step in ionic_steps_dict:
         frac_coords.append([site['abc'] for site in ionic_step['structure']['sites']])
 
@@ -100,7 +103,10 @@ def convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step):
                 _site_properties[key] = _prop
             site_properties.append(_site_properties)
         del ionic_step['structure']
-
+    if ionic_step:
+        frame_properties = ionic_steps_dict
+    else:
+        frame_properties = None
     return Trajectory(lattice, species, frac_coords, site_properties=site_properties,
-                      constant_lattice=True, frame_properties=ionic_steps_dict,
+                      constant_lattice=True, frame_properties=frame_properties,
                       time_step=time_step)

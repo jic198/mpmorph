@@ -15,7 +15,6 @@ from fireworks.utilities.fw_serializers import DATETIME_HANDLER
 from monty.json import MontyEncoder
 from pymatgen.core import Structure
 from pymatgen.core.trajectory import Trajectory
-from mpmorph.database import convert_ionic_steps_to_trajectory
 
 __author__ = 'Eric Sivonxay and Jianli Cheng'
 
@@ -144,9 +143,9 @@ def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):
     :param notes: (optional) any notes or comments on the specific run
     :return:
     """
-    trajectory = load_trajectories_from_gfs(runs, mmdb)
-    traj_dict = json.dumps(trajectory.as_dict(), cls=MontyEncoder)
-    gfs_id, compression_type = insert_gridfs(traj_dict, mmdb.db, "trajectories_fs")
+    trajectory = runs_to_trajectory_from_gfs(runs, mmdb)
+    gfs_id, compression_type = insert_gridfs(trajectory.as_dict(), mmdb.db,
+                                             "trajectories_fs")
 
     traj_doc = {
         'formula_pretty': trajectory[0].composition.reduced_formula,
@@ -160,36 +159,19 @@ def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):
         'structure': trajectory[0].as_dict(),
         'dimension': list(np.shape(trajectory.frac_coords)),
         'time_step': runs[0]["input"]["incar"]["POTIM"] * 1e-3,
-        'frame_properties': list(trajectory.frame_properties.keys()),
+        'frame_properties': list(trajectory.frame_properties[0].keys()),
         'notes': notes
     }
     return traj_doc
 
 
-def load_trajectories_from_gfs(runs, mmdb):
-    gfs_keys = []
-    for run in runs:
-        # 3 cases to deal with: 1) Trajectory 2) previous_runs (old mpmorph) 3) structures_fs
-        if 'trajectory' in run.keys():
-            gfs_keys.append((run['trajectory']['fs_id'], 'trajectories_fs'))
-        elif "INCAR" in run.keys():
-            # for backwards compatibility with older version of mpmorph
-            gfs_keys.append((run["ionic_steps_fs_id"], 'previous_runs_gfs'))
-        elif "input" in run.keys():
-            gfs_keys.append((run["calcs_reversed"][0]["output"]["ionic_steps_fs_id"], 'structures_fs'))
-
+def runs_to_trajectory_from_gfs(runs, mmdb):
+    gfs_keys = [[run['trajectory']['fs_id'], 'trajectories_fs'] for run in runs]
     trajectory = None
     for i, (fs_id, fs) in enumerate(gfs_keys):
-        if fs == 'trajectories_fs' or fs == 'rebuild_trajectories_fs':
-            # Load stored Trajectory
-            print(fs_id, 'is stored in trajectories_fs')
-            _trajectory = load_trajectory(fs_id=fs_id, db=mmdb.db, fs=fs)
-        else:
-            # Load Ionic steps from gfs, then convert to trajectory before extending
-            # (compatibility code for when mpmorph stored trajectories as a list of structure dicts)
-            ionic_steps_dict = load_ionic_steps(fs_id=fs_id, db=mmdb.db, fs=fs)
-            time_step = run['input']['incar']['POTIM']
-            _trajectory = convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step)
+        # Load stored Trajectory
+        print(fs_id, 'is stored in trajectories_fs')
+        _trajectory = load_trajectory_gfs(fs_id=fs_id, db=mmdb.db, fs=fs)
         if trajectory is None:
             trajectory = _trajectory
         else:
@@ -199,30 +181,7 @@ def load_trajectories_from_gfs(runs, mmdb):
     return trajectory
 
 
-def process_traj(data):
-    i, fs_id, fs, db_file = data[0], data[1], data[2], data[3]
-    mmdb = VaspMDCalcDb.from_db_file(db_file, admin=True)
-    ionic_steps_dict = load_ionic_steps(fs_id, mmdb.db, fs)
-
-    structure = Structure.from_dict(ionic_steps_dict[0]['structure'])
-    positions = [0] * len(ionic_steps_dict)
-    for i, step in enumerate(ionic_steps_dict):
-        _step = [atom['abc'] for atom in step["structure"]["sites"]]
-        positions[i] = _step
-
-    traj = Trajectory(structure.lattice.matrix, structure.species, positions, 0.002)
-    return i, traj.as_dict()
-
-
-def load_ionic_steps(fs_id, db, fs):
-    fs = gridfs.GridFS(db, fs)
-    ionic_steps_json = zlib.decompress(fs.get(fs_id).read())
-    ionic_steps_dict = json.loads(ionic_steps_json.decode())
-    del ionic_steps_json
-    return ionic_steps_dict
-
-
-def load_trajectory(fs_id, db, fs=None):
+def load_trajectory_gfs(fs_id, db, fs=None):
     if not fs:
         # Default to trajectories_fs
         fs = gridfs.GridFS(db, 'trajectories_fs')
@@ -234,8 +193,12 @@ def load_trajectory(fs_id, db, fs=None):
     trajectories_dict = json.loads(trajectories_json.decode())
     try:
         trajectory = Trajectory.from_dict(trajectories_dict)
-    except AttributeError:
-        trajectories_dict = json.loads(trajectories_dict)
+    except AssertionError:
+        frame_properties = []
+        for i in range(len(trajectories_dict['frac_coords'])):
+            frame_properties.append({key: trajectories_dict['frame_properties'][key][i]
+                                     for key in trajectories_dict['frame_properties'].keys()})
+        trajectories_dict['frame_properties'] = frame_properties
         trajectory = Trajectory.from_dict(trajectories_dict)
     return trajectory
 
@@ -254,17 +217,17 @@ def insert_gridfs(d, db, collection="fs", compress=True, oid=None, task_id=None)
     """
     oid = oid or ObjectId()
     compression_type = None
-
+    d_str = json.dumps(d, cls=MontyEncoder)
     if compress:
-        d = zlib.compress(d.encode(), compress)
+        d_str = zlib.compress(d_str.encode(), compress)
         compression_type = "zlib"
 
     fs = gridfs.GridFS(db, collection)
     if task_id:
         # Putting task id in the metadata subdocument as per mongo specs:
         # https://github.com/mongodb/specifications/blob/master/source/gridfs/gridfs-spec.rst#terms
-        fs_id = fs.put(d, _id=oid, metadata={"task_id": task_id, "compression": compression_type})
+        fs_id = fs.put(d_str, _id=oid, metadata={"task_id": task_id, "compression": compression_type})
     else:
-        fs_id = fs.put(d, _id=oid, metadata={"compression": compression_type})
+        fs_id = fs.put(d_str, _id=oid, metadata={"compression": compression_type})
 
     return fs_id, compression_type

@@ -1,15 +1,10 @@
 from __future__ import division, print_function, unicode_literals, absolute_import
 
 import json
-import zlib
-
-import gridfs
 from atomate.utils.utils import get_logger
 from atomate.vasp.database import VaspCalcDb
 from monty.json import MontyEncoder
-from pymatgen.core import Structure
 from pymatgen.core.trajectory import Trajectory
-from collections import defaultdict
 import numpy as np
 
 logger = get_logger(__name__)
@@ -79,7 +74,7 @@ class VaspMDCalcDb(VaspCalcDb):
                 'fs': 'trajectories_fs',
                 'dimension': list(np.shape(trajectory.frac_coords)),
                 'time_step': task_doc["input"]["incar"]["POTIM"],
-                'frame_properties': list(trajectory.frame_properties.keys())
+                'frame_properties': list(trajectory.frame_properties[0].keys())
             }
 
         # insert the task document and return task_id
@@ -87,22 +82,16 @@ class VaspMDCalcDb(VaspCalcDb):
 
 
 def convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step):
-    ## Convert from a list of dictionaries to a dictionary of lists
-    ionic_steps_defaultdict = defaultdict(list)
-    for d in ionic_steps_dict:
-        for key, val in d.items():
-            ionic_steps_defaultdict[key].append(val)
-    ionic_steps = dict(ionic_steps_defaultdict.items())
+    read_site_props = False
+    if ionic_steps_dict[0]['structure']['sites'][0].get('properties'):
+        read_site_props = True
+    lattice = ionic_steps_dict[0]['structure']['lattice']['matrix']
+    species = [site['species'][0]['element'] for site in ionic_steps_dict[0]['structure']['sites']]
 
     frac_coords = []
     site_properties = []
-    read_site_props = False
-    if 'properties' in ionic_steps_dict[0]['structure']['sites'][0].keys():
-        read_site_props = True
-
     for ionic_step in ionic_steps_dict:
-        _frac_coords = [site['abc'] for site in ionic_step['structure']['sites']]
-        frac_coords.append(_frac_coords)
+        frac_coords.append([site['abc'] for site in ionic_step['structure']['sites']])
 
         if read_site_props:
             _site_properties = {}
@@ -110,19 +99,8 @@ def convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step):
                 _prop = [site['properties'][key] for site in ionic_step['structure']['sites']]
                 _site_properties[key] = _prop
             site_properties.append(_site_properties)
-        else:
-            site_properties.append(None)
-    lattice = ionic_steps_dict[0]['structure']['lattice']['matrix']
-    species = [site['species'][0]['element'] for site in ionic_step['structure']['sites']]
-
-    frame_properties = {}
-    keys = set(ionic_steps_dict[0].keys()) - set(['structure'])
-    for key in keys:
-        if key in ['forces', 'stress']:
-            frame_properties[key] = np.array(ionic_steps[key])
-        else:
-            frame_properties[key] = ionic_steps[key]
+        del ionic_step['structure']
 
     return Trajectory(lattice, species, frac_coords, site_properties=site_properties,
-                      constant_lattice=True, frame_properties=frame_properties,
+                      constant_lattice=True, frame_properties=ionic_steps_dict,
                       time_step=time_step)

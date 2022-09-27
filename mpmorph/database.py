@@ -9,7 +9,6 @@ from monty.json import MontyEncoder
 from atomate.utils.utils import get_logger
 from atomate.vasp.database import VaspCalcDb
 from pymatgen.core.trajectory import Trajectory
-from mpmorph.firetasks.dbtasks import insert_gridfs
 
 logger = get_logger(__name__)
 

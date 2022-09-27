@@ -191,6 +191,9 @@ def load_trajectory_gfs(fs_id, db, fs=None):
 
     trajectories_json = zlib.decompress(fs.get(fs_id).read())
     trajectories_dict = json.loads(trajectories_json.decode())
+    if isinstance(trajectories_dict, str):
+        # Previous bug in mpmorph resulted in double serialization of dictionary.
+        trajectories_dict = json.loads(trajectories_dict)
     try:
         trajectory = Trajectory.from_dict(trajectories_dict)
     except AssertionError:

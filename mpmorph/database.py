@@ -1,11 +1,10 @@
 from __future__ import division, print_function, unicode_literals, absolute_import
 
-import json
+import numpy as np
 from atomate.utils.utils import get_logger
 from atomate.vasp.database import VaspCalcDb
-from monty.json import MontyEncoder
 from pymatgen.core.trajectory import Trajectory
-import numpy as np
+from mpmorph.firetasks.dbtasks import insert_gridfs
 
 logger = get_logger(__name__)
 
@@ -38,8 +37,8 @@ class VaspMDCalcDb(VaspCalcDb):
         # insert dos into GridFS
         if parse_dos and "calcs_reversed" in task_doc:
             if "dos" in task_doc["calcs_reversed"][0]:  # only store idx=0 DOS
-                dos = json.dumps(task_doc["calcs_reversed"][0]["dos"], cls=MontyEncoder)
-                gfs_id, compression_type = self.insert_gridfs(dos, "dos_fs")
+                dos = task_doc["calcs_reversed"][0]["dos"]
+                gfs_id, compression_type = insert_gridfs(dos, "dos_fs")
                 task_doc["calcs_reversed"][0]["dos_compression"] = compression_type
                 task_doc["calcs_reversed"][0]["dos_fs_id"] = gfs_id
                 del task_doc["calcs_reversed"][0]["dos"]
@@ -47,8 +46,8 @@ class VaspMDCalcDb(VaspCalcDb):
         # insert band structure into GridFS
         if parse_bs and "calcs_reversed" in task_doc:
             if "bandstructure" in task_doc["calcs_reversed"][0]:  # only store idx=0 BS
-                bs = json.dumps(task_doc["calcs_reversed"][0]["bandstructure"], cls=MontyEncoder)
-                gfs_id, compression_type = self.insert_gridfs(bs, "bandstructure_fs")
+                bs = task_doc["calcs_reversed"][0]["bandstructure"]
+                gfs_id, compression_type = insert_gridfs(bs, "bandstructure_fs")
                 task_doc["calcs_reversed"][0]["bandstructure_compression"] = compression_type
                 task_doc["calcs_reversed"][0]["bandstructure_fs_id"] = gfs_id
                 del task_doc["calcs_reversed"][0]["bandstructure"]
@@ -62,8 +61,7 @@ class VaspMDCalcDb(VaspCalcDb):
             trajectory = convert_ionic_steps_to_trajectory((ionic_steps_dict), time_step)
             del task_doc["calcs_reversed"][0]['output']['ionic_steps']
 
-            traj_dict = json.dumps(trajectory, cls=MontyEncoder)
-            gfs_id, compression_type = self.insert_gridfs(traj_dict, "trajectories_fs")
+            gfs_id, compression_type = insert_gridfs(trajectory.as_dict(), "trajectories_fs")
 
             task_doc['trajectory'] = {
                 'formula_pretty': trajectory[0].composition.reduced_formula,

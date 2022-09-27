@@ -2,18 +2,14 @@ import json
 import os
 import re
 import zlib
-
 import gridfs
 import numpy as np
 from atomate.common.firetasks.glue_tasks import get_calc_loc
 from atomate.utils.utils import env_chk, get_logger
 from atomate.vasp.drones import VaspDrone
-from bson import ObjectId
-from mpmorph.database import VaspMDCalcDb
+from mpmorph.database import VaspMDCalcDb, insert_gridfs
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 from fireworks.utilities.fw_serializers import DATETIME_HANDLER
-from monty.json import MontyEncoder
-from pymatgen.core import Structure
 from pymatgen.core.trajectory import Trajectory
 
 __author__ = 'Eric Sivonxay and Jianli Cheng'
@@ -204,33 +200,3 @@ def load_trajectory_gfs(fs_id, db, fs=None):
         trajectories_dict['frame_properties'] = frame_properties
         trajectory = Trajectory.from_dict(trajectories_dict)
     return trajectory
-
-
-def insert_gridfs(d, db, collection="fs", compress=True, oid=None, task_id=None):
-    """
-    Insert the given document into GridFS.
-    Args:
-        d (dict): the document
-        collection (string): the GridFS collection name
-        compress (bool): Whether to compress the data or not
-        oid (ObjectId()): the _id of the file; if specified, it must not already exist in GridFS
-        task_id(int or str): the task_id to store into the gridfs metadata
-    Returns:
-        file id, the type of compression used.
-    """
-    oid = oid or ObjectId()
-    compression_type = None
-    d_str = json.dumps(d, cls=MontyEncoder)
-    if compress:
-        d_str = zlib.compress(d_str.encode(), compress)
-        compression_type = "zlib"
-
-    fs = gridfs.GridFS(db, collection)
-    if task_id:
-        # Putting task id in the metadata subdocument as per mongo specs:
-        # https://github.com/mongodb/specifications/blob/master/source/gridfs/gridfs-spec.rst#terms
-        fs_id = fs.put(d_str, _id=oid, metadata={"task_id": task_id, "compression": compression_type})
-    else:
-        fs_id = fs.put(d_str, _id=oid, metadata={"compression": compression_type})
-
-    return fs_id, compression_type

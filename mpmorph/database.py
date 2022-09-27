@@ -1,6 +1,11 @@
 from __future__ import division, print_function, unicode_literals, absolute_import
 
+import json
+import zlib
+import gridfs
 import numpy as np
+from bson import ObjectId
+from monty.json import MontyEncoder
 from atomate.utils.utils import get_logger
 from atomate.vasp.database import VaspCalcDb
 from pymatgen.core.trajectory import Trajectory
@@ -108,3 +113,33 @@ def convert_ionic_steps_to_trajectory(ionic_steps_dict, time_step):
     return Trajectory(lattice, species, frac_coords, site_properties=site_properties,
                       constant_lattice=True, frame_properties=frame_properties,
                       time_step=time_step)
+
+
+def insert_gridfs(d, db, collection="fs", compress=True, oid=None, task_id=None):
+    """
+    Insert the given document into GridFS.
+    Args:
+        d (dict): the document
+        collection (string): the GridFS collection name
+        compress (bool): Whether to compress the data or not
+        oid (ObjectId()): the _id of the file; if specified, it must not already exist in GridFS
+        task_id(int or str): the task_id to store into the gridfs metadata
+    Returns:
+        file id, the type of compression used.
+    """
+    oid = oid or ObjectId()
+    compression_type = None
+    d_str = json.dumps(d, cls=MontyEncoder)
+    if compress:
+        d_str = zlib.compress(d_str.encode(), compress)
+        compression_type = "zlib"
+
+    fs = gridfs.GridFS(db, collection)
+    if task_id:
+        # Putting task id in the metadata subdocument as per mongo specs:
+        # https://github.com/mongodb/specifications/blob/master/source/gridfs/gridfs-spec.rst#terms
+        fs_id = fs.put(d_str, _id=oid, metadata={"task_id": task_id, "compression": compression_type})
+    else:
+        fs_id = fs.put(d_str, _id=oid, metadata={"compression": compression_type})
+
+    return fs_id, compression_type

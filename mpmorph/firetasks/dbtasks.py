@@ -195,8 +195,14 @@ def load_trajectory_gfs(fs_id, db, fs=None):
     except AssertionError:
         frame_properties = []
         for i in range(len(trajectories_dict['frac_coords'])):
-            frame_properties.append({key: trajectories_dict['frame_properties'][key][i]
-                                     for key in trajectories_dict['frame_properties'].keys()})
+            _properties = {}
+            # forces were stored as an numpy object which serialized as a dict
+            for key in trajectories_dict['frame_properties'].keys():
+                if isinstance(trajectories_dict['frame_properties'][key], dict):
+                    _properties[key] = trajectories_dict['frame_properties'][key]['data'][0]
+                else:
+                    _properties[key] = trajectories_dict['frame_properties'][key][0]
+            frame_properties.append(_properties)
         trajectories_dict['frame_properties'] = frame_properties
         trajectory = Trajectory.from_dict(trajectories_dict)
     return trajectory

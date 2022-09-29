@@ -29,7 +29,7 @@ class VaspMDCalcDb(VaspCalcDb):
                              port=port,
                              username=user,
                              password=password,
-                             **kwargs)
+                             authSource=database)
         self.db = client[database]
         super(VaspMDCalcDb, self).__init__(host, port, database, collection, user, password, **kwargs)
 

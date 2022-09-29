@@ -5,6 +5,7 @@ import zlib
 import gridfs
 import numpy as np
 from bson import ObjectId
+from pymongo import MongoClient
 from monty.json import MontyEncoder
 from atomate.utils.utils import get_logger
 from atomate.vasp.database import VaspCalcDb
@@ -24,6 +25,12 @@ class VaspMDCalcDb(VaspCalcDb):
 
     def __init__(self, host="localhost", port=27017, database="vasp", collection="tasks", user=None,
                  password=None, **kwargs):
+        client = MongoClient(host=host,
+                             port=port,
+                             username=user,
+                             password=password,
+                             **kwargs)
+        self.db = client[database]
         super(VaspMDCalcDb, self).__init__(host, port, database, collection, user, password, **kwargs)
 
     def insert_task(self, task_doc, parse_dos=False, parse_bs=False, md_structures=False):
@@ -42,7 +49,7 @@ class VaspMDCalcDb(VaspCalcDb):
         if parse_dos and "calcs_reversed" in task_doc:
             if "dos" in task_doc["calcs_reversed"][0]:  # only store idx=0 DOS
                 dos = task_doc["calcs_reversed"][0]["dos"]
-                gfs_id, compression_type = insert_gridfs(dos, "dos_fs")
+                gfs_id, compression_type = insert_gridfs(dos, self.db, "dos_fs")
                 task_doc["calcs_reversed"][0]["dos_compression"] = compression_type
                 task_doc["calcs_reversed"][0]["dos_fs_id"] = gfs_id
                 del task_doc["calcs_reversed"][0]["dos"]
@@ -51,7 +58,7 @@ class VaspMDCalcDb(VaspCalcDb):
         if parse_bs and "calcs_reversed" in task_doc:
             if "bandstructure" in task_doc["calcs_reversed"][0]:  # only store idx=0 BS
                 bs = task_doc["calcs_reversed"][0]["bandstructure"]
-                gfs_id, compression_type = insert_gridfs(bs, "bandstructure_fs")
+                gfs_id, compression_type = insert_gridfs(bs, self.db, "bandstructure_fs")
                 task_doc["calcs_reversed"][0]["bandstructure_compression"] = compression_type
                 task_doc["calcs_reversed"][0]["bandstructure_fs_id"] = gfs_id
                 del task_doc["calcs_reversed"][0]["bandstructure"]
@@ -65,7 +72,7 @@ class VaspMDCalcDb(VaspCalcDb):
             trajectory = convert_ionic_steps_to_trajectory((ionic_steps_dict), time_step)
             del task_doc["calcs_reversed"][0]['output']['ionic_steps']
 
-            gfs_id, compression_type = insert_gridfs(trajectory.as_dict(), "trajectories_fs")
+            gfs_id, compression_type = insert_gridfs(trajectory.as_dict(), self.db, "trajectories_fs")
 
             task_doc['trajectory'] = {
                 'formula_pretty': trajectory[0].composition.reduced_formula,

@@ -45,8 +45,6 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
                                       "db_file": ">>db_file<<",
                                       "spec": {"_priority": priority}
                                       },
-                        "optional_fw_params": {"override_default_vasp_params": {
-                            'user_incar_settings': {'ISIF': 2}}}
                         }
             run_args = recursive_update(run_args, quench_args)
             _name = "snap_" + str(i)

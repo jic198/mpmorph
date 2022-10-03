@@ -3,7 +3,6 @@ from atomate.vasp.firetasks.glue_tasks import CopyVaspOutputs
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
 from atomate.vasp.firetasks.run_calc import RunVaspCustodian
 from atomate.vasp.firetasks.write_inputs import WriteVaspFromIOSet
-from atomate.vasp.fireworks.core import StaticFW
 from fireworks import Firework
 from mpmorph.firetasks.dbtasks import VaspMDToDb
 from mpmorph.firetasks.glue_tasks import PreviousStructureTask, SaveStructureTask

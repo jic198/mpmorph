@@ -199,9 +199,9 @@ def load_trajectory_gfs(fs_id, db, fs=None):
             # forces were stored as an numpy object which serialized as a dict
             for key in trajectories_dict['frame_properties'].keys():
                 if isinstance(trajectories_dict['frame_properties'][key], dict):
-                    _properties[key] = trajectories_dict['frame_properties'][key]['data'][0]
+                    _properties[key] = trajectories_dict['frame_properties'][key]['data'][i]
                 else:
-                    _properties[key] = trajectories_dict['frame_properties'][key][0]
+                    _properties[key] = trajectories_dict['frame_properties'][key][i]
             frame_properties.append(_properties)
         trajectories_dict['frame_properties'] = frame_properties
         trajectory = Trajectory.from_dict(trajectories_dict)

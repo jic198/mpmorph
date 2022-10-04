@@ -51,15 +51,13 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
 
             fw1 = OptimizeFW(structure=structure, name=_name + descriptor + "_optimize",
                              parents=[_fw_list[-1]] if len(_fw_list) > 0 else [],
-                             **run_args["run_specs"], **run_args["optional_fw_params"],
-                             max_force_threshold=None)
+                             **run_args["run_specs"], max_force_threshold=None)
             if len(_fw_list) > 0:
                 fw1 = powerups.add_cont_structure(fw1)
             fw1 = powerups.add_pass_structure(fw1)
 
             fw2 = StaticFW(structure=structure, name=_name + descriptor + "_static",
-                           parents=[fw1], **run_args["run_specs"],
-                           **run_args["optional_fw_params"])
+                           parents=[fw1], **run_args["run_specs"])
             fw2 = powerups.add_cont_structure(fw2)
             fw2 = powerups.add_pass_structure(fw2)
 
@@ -72,15 +70,16 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
     return wf
 
 
-def get_MDFW(structure, start_temp, end_temp, name="molecular dynamics", priority=None,
-             args=None, **kwargs):
+def get_MDFW(structure, start_temp, end_temp, name="molecular dynamics", args=None, **kwargs):
     run_args = {"md_params": {"nsteps": 500, "start_temp": start_temp, "end_temp": end_temp},
                 "run_specs": {"vasp_input_set": None, "vasp_cmd": ">>vasp_cmd<<",
                               "db_file": ">>db_file<<"},
-                "optional_fw_params": {"override_default_vasp_params": {}, "spec": {}}}
-
-    run_args["optional_fw_params"]["override_default_vasp_params"].update(
-        {'user_incar_settings': {'ISIF': 1, 'LWAVE': False, 'PREC': 'Low'}})
+                "optional_fw_params": {
+                    "override_default_vasp_params": {
+                        'user_incar_settings': {'ISIF': 1, 'LWAVE': False, 'PREC': 'Low'}
+                    }
+                }
+                }
     run_args = recursive_update(run_args, args)
     _mdfw = MDFW(structure=structure, name=name, **run_args["md_params"],
                  **run_args["run_specs"], **run_args["optional_fw_params"], **kwargs)

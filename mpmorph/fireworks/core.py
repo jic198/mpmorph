@@ -128,7 +128,6 @@ class StaticFW(Firework):
                  previous_structure=False, vasp_input_set=None,
                  vasp_cmd="vasp", db_file=None, parents=None,
                  override_default_vasp_params=None,
-                 pass_structure=True,
                  prev_calc_loc=False, **kwargs):
         """
         This Firework is modified from atomate.vasp.fireworks.core.StaticFW to fit the needs of mpmorph

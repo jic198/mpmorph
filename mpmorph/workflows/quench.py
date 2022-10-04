@@ -45,19 +45,20 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
                                       "db_file": ">>db_file<<",
                                       "spec": {"_priority": priority}
                                       },
+                        "optional_fw_params": {}
                         }
             run_args = recursive_update(run_args, quench_args)
             _name = "snap_" + str(i)
 
             fw1 = OptimizeFW(structure=structure, name=_name + descriptor + "_optimize",
                              parents=[_fw_list[-1]] if len(_fw_list) > 0 else [],
-                             **run_args["run_specs"], max_force_threshold=None)
+                             **run_args["run_specs"], **run_args["optional_fw_params"])
             if len(_fw_list) > 0:
                 fw1 = powerups.add_cont_structure(fw1)
             fw1 = powerups.add_pass_structure(fw1)
 
             fw2 = StaticFW(structure=structure, name=_name + descriptor + "_static",
-                           parents=[fw1], **run_args["run_specs"])
+                           parents=[fw1], **run_args["run_specs"], **run_args["optional_fw_params"])
             fw2 = powerups.add_cont_structure(fw2)
             fw2 = powerups.add_pass_structure(fw2)
 

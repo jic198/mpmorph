@@ -46,7 +46,8 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
 
     # Setup initial Run and convergence of structure
     run_args = {"md_params": {"start_temp": temperature, "end_temp": temperature, "nsteps": 2000},
-                "run_specs": {"vasp_cmd": ">>vasp_cmd<<", "db_file": ">>db_file<<"},
+                "run_specs": {"vasp_cmd": ">>vasp_cmd<<", "db_file": ">>db_file<<",
+                              'scratch_dir': '>>scratch_dir<<'},
                 "optional_fw_params": {
                     "override_default_vasp_params": {'user_incar_settings': {'ISIF': 1, 'LWAVE': False,
                                                                              'PREC': 'Normal'}},

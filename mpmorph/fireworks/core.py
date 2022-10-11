@@ -20,8 +20,9 @@ __email__ = "esivonxay@lbl.gov"
 class MDFW(Firework):
     def __init__(self, structure, start_temp, end_temp, nsteps, name="molecular dynamics",
                  vasp_input_set=None, vasp_cmd="vasp", override_default_vasp_params=None,
-                 wall_time=None, db_file=None, parents=None, copy_vasp_outputs=False,
-                 previous_structure=False, insert_db=False, save_structure=True, **kwargs):
+                 wall_time=None, db_file=None, parents=None, previous_structure=False,
+                 insert_db=False, save_structure=True, scratch_dir='>>scratch_dir<<',
+                 **kwargs):
         """
         This Firework is modified from atomate.vasp.fireworks.core.MDFW to fit the needs of mpmorph
         Standard firework for a single MD run.
@@ -40,7 +41,6 @@ class MDFW(Firework):
                 settings, e.g., user_incar_settings, etc. Particular to MD,
                 one can control time_step and all other settings of the input set.
             wall_time (int): Total wall time in seconds before writing STOPCAR.
-            copy_vasp_outputs (bool): Whether to copy outputs from previous run. Defaults to True.
             db_file (string): Path to file specifying db credentials.
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
@@ -53,7 +53,9 @@ class MDFW(Firework):
         t = [WriteVaspFromIOSet(structure=structure, vasp_input_set=vasp_input_set)]
         if previous_structure:
             t.append(PreviousStructureTask())
-        t.append(RunVaspCustodian(vasp_cmd=vasp_cmd, gamma_vasp_cmd=">>gamma_vasp_cmd<<",
+        t.append(RunVaspCustodian(vasp_cmd=vasp_cmd,
+                                  gamma_vasp_cmd=">>gamma_vasp_cmd<<",
+                                  scratch_dir=scratch_dir,
                                   handler_group="md", wall_time=wall_time))
         t.append(PassCalcLocs(name=name))
         if save_structure:

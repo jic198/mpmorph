@@ -43,6 +43,7 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
             # Relax OptimizeFW and StaticFW
             run_args = {"run_specs": {"vasp_input_set": None, "vasp_cmd": ">>vasp_cmd<<",
                                       "db_file": ">>db_file<<",
+                                      "max_force_threshold": None,
                                       "spec": {"_priority": priority}
                                       },
                         "optional_fw_params": {}

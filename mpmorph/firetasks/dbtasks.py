@@ -127,6 +127,19 @@ class TrajectoryDBTask(FiretaskBase):
         mmdb.db.trajectories.insert_one(trajectory_doc)
 
 
+@explicit_serialize
+class DiffusionAnalysisTask(FiretaskBase):
+    """
+    Calculate ionic diffusivity and conductivity and insert them into the db. This is done by
+    searching for a unique tag
+    """
+    required_params = ["tag_id", "db_file"]
+    optional_params = ['notes']
+
+    def run_task(self, fw_spec):
+        notes = self.get('notes', None)
+
+
 def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):
     """
     Takes a list of task_documents, aggregates the trajectories from the ionics_steps gridfs storage, then dumps

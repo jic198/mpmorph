@@ -117,7 +117,6 @@ class OptimizeFW(Firework):
                                   half_kpts_first_relax=half_kpts_first_relax,
                                   handler_group=handler_group))
         t.append(PassCalcLocs(name=name))
-        t.append(SaveStructureTask())
 
         if insert_db:
             t.append(VaspToDb(db_file=db_file, additional_fields={"task_label": name}))

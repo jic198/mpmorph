@@ -1,14 +1,13 @@
 import uuid
 from copy import deepcopy
-
 from fireworks import Workflow
 from mpmorph.fireworks import powerups
 from mpmorph.fireworks.core import MDFW
 from mpmorph.util import recursive_update
 
 __author__ = 'Eric Sivonxay, Jianli Cheng, and Muratahan Aykol'
-__maintainer__ = 'Eric Sivonxay'
-__email__ = 'esivonxay@lbl.gov'
+__maintainer__ = 'Jianli Cheng'
+__email__ = 'jianlicheng@lbl.gov'
 
 
 def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=None,
@@ -37,6 +36,7 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
     # Generate a unique identifier for the fireworks belonging to this workflows
     tag_id = kwargs.get('tag_id', uuid.uuid4())
     prod_count = kwargs.get('prod_count', 0)
+    diffusion = kwargs.get('diffusion_analysis')
 
     # To aggregate trajectory, the job output from the production runs must be saved.
     if aggregate_trajectory and save_data is None:
@@ -135,6 +135,12 @@ def get_converge_fws(structure, temperature, converge_scheme='EOS', priority=Non
     if aggregate_trajectory:
         fw_list[-1] = powerups.aggregate_trajectory(fw_list[-1], tag_id=tag_id, notes=notes,
                                                     db_file=run_args["run_specs"]["db_file"])
+
+    if diffusion:
+        fw_list[-1] = powerups.diffusion_analysis(fw_list[-1], tag_id=tag_id, notes=notes,
+                                                  step_skip=diffusion['step_skip'],
+                                                  t_range=diffusion['t_range'],
+                                                  db_file=run_args["run_specs"]["db_file"])
 
     return fw_list
 

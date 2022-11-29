@@ -1,4 +1,4 @@
-from mpmorph.firetasks.dbtasks import VaspMDToDb, TrajectoryDBTask
+from mpmorph.firetasks.dbtasks import VaspMDToDb, TrajectoryDBTask, DiffusionAnalysisTask
 from mpmorph.firetasks.glue_tasks import PreviousStructureTask, SaveStructureTask, \
     PassPVTask
 from mpmorph.firetasks.mdtasks import RescaleVolumeTask, ConvergeTask, PVRescaleTask, \
@@ -32,11 +32,16 @@ def add_converge_task(fw, **kwargs):
 def aggregate_trajectory(fw, **kwargs):
     """
     This firetask will add a task which converts a series of MD runs into a trajectory object
-    :param fw:
-    :param kwargs:
-    :return:
     """
     fw.tasks.append(TrajectoryDBTask(**kwargs))
+    return fw
+
+
+def diffusion_analysis(fw, **kwargs):
+    """
+    This firetask will add a task which converts a series of MD runs into a trajectory object
+    """
+    fw.tasks.append(DiffusionAnalysisTask(**kwargs))
     return fw
 
 

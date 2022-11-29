@@ -7,10 +7,11 @@ import numpy as np
 from atomate.common.firetasks.glue_tasks import get_calc_loc
 from atomate.utils.utils import env_chk, get_logger
 from atomate.vasp.drones import VaspDrone
-from mpmorph.database import VaspMDCalcDb, insert_gridfs
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 from fireworks.utilities.fw_serializers import DATETIME_HANDLER
 from pymatgen.core.trajectory import Trajectory
+from mpmorph.database import VaspMDCalcDb, insert_gridfs
+from mpmorph.util import msd_fft
 
 __author__ = 'Eric Sivonxay and Jianli Cheng'
 
@@ -133,11 +134,68 @@ class DiffusionAnalysisTask(FiretaskBase):
     Calculate ionic diffusivity and conductivity and insert them into the db. This is done by
     searching for a unique tag
     """
-    required_params = ["tag_id", "db_file"]
-    optional_params = ['notes']
+    required_params = ['tag_id', 'db_file', 'step_skip', 't_range']
 
     def run_task(self, fw_spec):
-        notes = self.get('notes', None)
+        step_skip = self.get('step_skip')
+        t_range = self.get('t_range')
+        db_file = env_chk(self.get('db_file'), fw_spec)
+        mmdb = VaspMDCalcDb.from_db_file(db_file, admin=True)
+        traj_doc = mmdb.db.trajectories.find_one({'runs_label': self.get('tag_id')})
+        fs_id = traj_doc['fs_id']
+        fs = gridfs.GridFS(mmdb.db, 'trajectories_fs')
+        ionic_steps_json = zlib.decompress(fs.get(fs_id).read())
+        ionic_steps_dict = json.loads(ionic_steps_json.decode())
+        traj = Trajectory.from_dict(ionic_steps_dict)
+        structure = traj[0]
+        p, l = [], []
+        for i, s in enumerate(traj):
+            p.append(np.array(s.frac_coords)[:, None])
+            l.append(s.lattice.matrix)
+        p.insert(0, p[0])
+        l.insert(0, l[0])
+        p = np.concatenate(p, axis=1)
+        dp = p[:, 1:] - p[:, :-1]
+        dp = dp - np.round(dp)
+        f_disp = np.cumsum(dp, axis=1)
+        c_disp = []
+        for i in f_disp:
+            c_disp.append([np.dot(d, m) for d, m in zip(i, l[1:])])
+        c_disp = np.array(c_disp)
+        nions, nsteps, dim = c_disp.shape
+        wts = [site.species.weight for site in structure]
+        dc = []
+        for i in range(nsteps):
+            frame = c_disp[:, i, :]
+            center = np.sum([v * wts[i] for i, v in enumerate(frame)], axis=0)
+            dc.append(frame - center / sum(wts))
+        dc = np.array(dc)
+        nions, nsteps, dim = dc.shape
+        timesteps = np.arange(nsteps)
+        dt = timesteps * traj.time_step * step_skip
+        if len(t_range) < 2:
+            t_range.append(dt[-1])
+        for ele in structure.composition.elements:
+            ele = str(ele)
+            indices = structure.indices_from_symbol(ele)
+            sp_disp = dc[:, indices, :]
+            msd = np.zeros(len(dt))
+            n_atoms = len(indices)
+            for atom_num in range(n_atoms):
+                msd_temp = msd_fft(sp_disp[:, atom_num, :])
+                msd += msd_temp
+            x = np.array([])
+            y = np.array([])
+            for i, v in enumerate(dt):
+                if t_range[0] < v < t_range[1]:
+                    x = np.append(x, v)
+                    y = np.append(y, msd[i])
+
+            a = np.ones((len(x), 2))
+            a[:, 0] = x
+            (m, c), _, _, _ = np.linalg.lstsq(a, y, rcond=None)
+            mmdb.db.trajectories.update_one({'_id': traj_doc['_id']},
+                                            {'$set': {f'diffusivity.{ele}': m / 60 / n_atoms}})
 
 
 def runs_to_trajectory_doc(runs, mmdb, runs_label, notes=None):

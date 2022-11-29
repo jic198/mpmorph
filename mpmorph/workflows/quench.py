@@ -1,8 +1,7 @@
 import numpy as np
-from atomate.vasp.fireworks.core import OptimizeFW
 from fireworks import Workflow
 from mpmorph.fireworks import powerups
-from mpmorph.fireworks.core import StaticFW, MDFW
+from mpmorph.fireworks.core import OptimizeFW, StaticFW, MDFW
 from mpmorph.util import recursive_update
 
 __author__ = 'Eric Sivonxay and Muratahan Aykol'
@@ -43,7 +42,6 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
             # Relax OptimizeFW and StaticFW
             run_args = {"run_specs": {"vasp_input_set": None, "vasp_cmd": ">>vasp_cmd<<",
                                       "db_file": ">>db_file<<",
-                                      "max_force_threshold": None,
                                       "spec": {"_priority": priority}
                                       },
                         "optional_fw_params": {}

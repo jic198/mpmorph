@@ -69,8 +69,8 @@ class MDFW(Firework):
 
 class OptimizeFW(Firework):
     def __init__(self, structure, name="structure optimization", vasp_input_set=None,
-                 insert_db=True, vasp_cmd="vasp", override_default_vasp_params=None,
-                 ediffg=None, db_file=None, force_gamma=True,
+                 insert_db=True, vasp_cmd=">>vasp_cmd<<", override_default_vasp_params=None,
+                 ediffg=None, db_file='>>db_file<<', force_gamma=True,
                  job_type="double_relaxation_run", max_force_threshold=None,
                  previous_structure=False, auto_npar=">>auto_npar<<",
                  half_kpts_first_relax=False, parents=None,
@@ -128,7 +128,7 @@ class OptimizeFW(Firework):
 class StaticFW(Firework):
     def __init__(self, structure, name="static",
                  previous_structure=False, vasp_input_set=None,
-                 vasp_cmd="vasp", db_file=None, parents=None,
+                 vasp_cmd=">>vasp_cmd<<", db_file='>>db_file<<', parents=None,
                  override_default_vasp_params=None,
                  prev_calc_loc=False, **kwargs):
         """

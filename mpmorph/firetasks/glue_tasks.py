@@ -42,7 +42,8 @@ class SaveStructureTask(FireTaskBase):
             if "CONTCAR" in file_name:
                 files.append(file_name)
 
-        _poscar = Poscar.from_file(filename=files[-1], check_for_POTCAR=True, read_velocities=True)
+        _poscar = Poscar.from_file(filename=sorted(files)[-1],
+                                   check_for_POTCAR=True, read_velocities=True)
         _structure = _poscar.structure.as_dict()
 
         return FWAction(update_spec={"structure": _structure})

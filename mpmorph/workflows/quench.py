@@ -1,5 +1,6 @@
 import numpy as np
 from fireworks import Workflow
+# from atomate.vasp.fireworks.core import OptimizeFW, StaticFW
 from mpmorph.fireworks import powerups
 from mpmorph.fireworks.core import OptimizeFW, StaticFW, MDFW
 from mpmorph.util import recursive_update
@@ -49,17 +50,14 @@ def get_quench_wf(structures, temperatures=None, priority=None, quench_type="slo
             run_args = recursive_update(run_args, quench_args)
             _name = "snap_" + str(i)
 
-            fw1 = OptimizeFW(structure=structure, name=_name + descriptor + "_optimize",
+            fw1 = OptimizeFW(structure=structure, name=f'{_name}{descriptor}_optimize',
                              parents=[_fw_list[-1]] if len(_fw_list) > 0 else [],
+                             previous_structure=True if len(_fw_list) > 0 else False,
                              **run_args["run_specs"], **run_args["optional_fw_params"])
-            if len(_fw_list) > 0:
-                fw1 = powerups.add_cont_structure(fw1)
-            fw1 = powerups.add_pass_structure(fw1)
 
-            fw2 = StaticFW(structure=structure, name=_name + descriptor + "_static",
-                           parents=[fw1], **run_args["run_specs"], **run_args["optional_fw_params"])
-            fw2 = powerups.add_cont_structure(fw2)
-            fw2 = powerups.add_pass_structure(fw2)
+            fw2 = StaticFW(structure=structure, name=f'{_name}{descriptor}_static',
+                           parents=[fw1], previous_structure=True,
+                           **run_args["run_specs"], **run_args["optional_fw_params"])
 
             _fw_list.extend([fw1, fw2])
 

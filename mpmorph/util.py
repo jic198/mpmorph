@@ -1,5 +1,10 @@
+import re
 import numpy as np
 import collections
+from monty.io import zopen
+from scipy.optimize import curve_fit
+from pymatgen.core import Structure
+from pymatgen.io.lammps.data import LammpsBox
 
 __author__ = 'Jianli Cheng, Eric Sivonxay'
 
@@ -91,3 +96,41 @@ def get_msd(structure, frac_coords, lattices, step_skip, time_step):
             msd += msd_temp
         msds[ele] = msd
     return msds
+
+
+def linear(x, k, b):
+    return k * x + b
+
+
+def fit_arrhenius(temps, diffusivities, weight):
+    t_1 = 1 / np.array(temps)
+    logd = np.log(diffusivities)
+    [slope, intercept], cov = curve_fit(linear, t_1, logd, sigma=weight)
+    return slope, intercept, cov
+
+
+def get_extrapolated_diffusivity(temps, diffusivities, weight, t):
+    slope, intercept, cov = fit_arrhenius(temps, diffusivities, weight)
+    slope_sigma = np.sqrt(np.diag(cov))[0]
+    intercept_sigma = np.sqrt(np.diag(cov))[1]
+    log_d = slope * (1 / t) + intercept
+    log_d_sigma = ((slope_sigma * (1 / t)) ** 2 + intercept_sigma ** 2) ** 0.5
+    d_min = np.exp(log_d - log_d_sigma)
+    d_max = np.exp(log_d + log_d_sigma)
+    return np.exp(log_d), [d_min, d_max]
+
+
+def get_structure_from_lammps(filename, element_profile):
+    with zopen(filename, 'rt') as f:
+        lines = f.read()
+    bounds_pattern = re.compile('pp\n(.*)\nITEM', re.S)
+    bounds = bounds_pattern.findall(lines)[0].split('\n')[:3] 
+    bounds = np.array([b.split() for b in bounds], dtype=np.float64)
+    orth_bd = bounds[:,:2]
+    lattice = LammpsBox(bounds=orth_bd).to_lattice()
+    info_pattern = re.compile('xs ys zs(.*)', re.S)
+    infos = info_pattern.findall(lines)[0].split('\n')[1:-1]
+    infos = np.array([info.split() for info in infos], dtype=np.float64)
+    coords = infos[:, -3:]
+    species = [element_profile[i] for i in infos[:, 1].astype(np.int32)]
+    return Structure(lattice=lattice, species=species, coords=coords)

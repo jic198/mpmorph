@@ -63,7 +63,7 @@ def get_diffusivity(structures, step_skip, time_step, t_range):
         a = np.ones((len(x), 2))
         a[:, 0] = x
         (m, c), _, _, _ = np.linalg.lstsq(a, y, rcond=None)
-        diffs[ele] = m / 60 / len(structures[0].indices_from_symbol(ele))
+        diffs[ele] = float(m / 60 / len(structures[0].indices_from_symbol(ele)))
     return diffs
 
 

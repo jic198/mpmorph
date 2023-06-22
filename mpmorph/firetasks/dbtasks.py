@@ -147,14 +147,7 @@ class DiffusionAnalysisTask(FiretaskBase):
         ionic_steps_json = zlib.decompress(fs.get(fs_id).read())
         ionic_steps_dict = json.loads(ionic_steps_json.decode())
         traj = Trajectory.from_dict(ionic_steps_dict)
-        structure = traj[0]
-        p, l = [], []
-        for s in traj:
-            p.append(np.array(s.frac_coords)[:, None])
-            l.append(s.lattice.matrix)
-        p.insert(0, p[0])
-        l.insert(0, l[0])
-        diffs = get_diffusivity(structure, p, l, step_skip, traj.time_step, t_range)
+        diffs = get_diffusivity(traj[:], step_skip, traj.time_step, t_range)
         mmdb.db.trajectories.update_one({'_id': traj_doc['_id']},
                                         {'$set': {'diffusivity': diffs}})
         

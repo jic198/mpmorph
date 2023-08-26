@@ -230,4 +230,7 @@ def load_trajectory_gfs(fs_id, db, fs=None):
             frame_properties.append(_properties)
         trajectories_dict['frame_properties'] = frame_properties
         trajectory = Trajectory.from_dict(trajectories_dict)
+    except TypeError:
+        trajectories_dict['coords'] = trajectories_dict.pop('frac_coords')
+        trajectory = Trajectory.from_dict(trajectories_dict)
     return trajectory

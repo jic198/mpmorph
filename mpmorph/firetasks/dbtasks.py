@@ -210,27 +210,27 @@ def load_trajectory_gfs(fs_id, db, fs=None):
         # Handle fs supplied as str
         fs = gridfs.GridFS(db, fs)
 
-    trajectories_json = zlib.decompress(fs.get(fs_id).read())
-    trajectories_dict = json.loads(trajectories_json.decode())
-    if isinstance(trajectories_dict, str):
+    trajectory_json = zlib.decompress(fs.get(fs_id).read())
+    trajectory_dict = json.loads(trajectory_json.decode())
+    if isinstance(trajectory_dict, str):
         # Previous bug in mpmorph resulted in double serialization of dictionary.
-        trajectories_dict = json.loads(trajectories_dict)
+        trajectory_dict = json.loads(trajectory_dict)
     try:
-        trajectory = Trajectory.from_dict(trajectories_dict)
+        trajectory = Trajectory.from_dict(trajectory_dict)
     except AssertionError:
         frame_properties = []
-        for i in range(len(trajectories_dict['frac_coords'])):
+        for i in range(len(trajectory_dict['frac_coords'])):
             _properties = {}
             # forces were stored as an numpy object which serialized as a dict
-            for key in trajectories_dict['frame_properties'].keys():
-                if isinstance(trajectories_dict['frame_properties'][key], dict):
-                    _properties[key] = trajectories_dict['frame_properties'][key]['data'][i]
+            for key in trajectory_dict['frame_properties'].keys():
+                if isinstance(trajectory_dict['frame_properties'][key], dict):
+                    _properties[key] = trajectory_dict['frame_properties'][key]['data'][i]
                 else:
-                    _properties[key] = trajectories_dict['frame_properties'][key][i]
+                    _properties[key] = trajectory_dict['frame_properties'][key][i]
             frame_properties.append(_properties)
-        trajectories_dict['frame_properties'] = frame_properties
-        trajectory = Trajectory.from_dict(trajectories_dict)
+        trajectory_dict['frame_properties'] = frame_properties
+        trajectory = Trajectory.from_dict(trajectory_dict)
     except TypeError:
-        trajectories_dict['coords'] = trajectories_dict.pop('frac_coords')
-        trajectory = Trajectory.from_dict(trajectories_dict)
+        trajectory_dict['coords'] = trajectory_dict.pop('frac_coords')
+        trajectory = Trajectory.from_dict(trajectory_dict)
     return trajectory

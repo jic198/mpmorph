@@ -67,11 +67,13 @@ def get_diffusivity(structures, step_skip, time_step, t_range):
     return diffs
 
 
-def get_msd(structures, step_skip, time_step):
+def get_msd(structures, step_skip, time_step, species=None):
+    num = len(structures)
     p, l = [], []
     for s in structures:
         p.append(np.array(s.frac_coords)[:, None])
         l.append(s.lattice.matrix)
+    del structures
     p.insert(0, p[0])
     l.insert(0, l[0])
     p = np.concatenate(p, axis=1)
@@ -82,18 +84,18 @@ def get_msd(structures, step_skip, time_step):
     for i in f_disp:
         c_disp.append([np.dot(d, m) for d, m in zip(i, l[1:])])
     c_disp = np.array(c_disp)
-    wts = [site.species.weight for site in structures[0]]
+    wts = [site.species.weight for site in s]
     dc = []
-    for i in range(len(structures)):
+    for i in range(num):
         frame = c_disp[:, i, :]
         center = np.sum([v * wts[i] for i, v in enumerate(frame)], axis=0)
         dc.append(frame - center / sum(wts))
     dc = np.array(dc)
-    dt = np.arange(len(structures)) * time_step * step_skip
+    dt = np.arange(num) * time_step * step_skip
+    eles = species if species else [str(ele) for ele in s.composition.elements]
     msds = {}
-    for ele in structures[0].composition.elements:
-        ele = str(ele)
-        indices = structures[0].indices_from_symbol(ele)
+    for ele in eles:
+        indices = s.indices_from_symbol(ele)
         sp_disp = dc[:, indices, :]
         msd = np.zeros(len(dt))
         n_atoms = len(indices)
